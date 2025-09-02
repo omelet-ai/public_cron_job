@@ -1,0 +1,49 @@
+name: Build and Push - south_korea
+
+on:
+  schedule:
+    - cron: '0 19 * * *'  # Runs daily at 19 UTC (4 am Korea)
+  workflow_dispatch:
+
+env:
+  BASE_PATH: 333025262616.dkr.ecr.ap-northeast-2.amazonaws.com/osrm
+  FULL_LOCATION: asia/south-korea
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2
+
+      - name: Log in to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin ${{ env.BASE_PATH }}
+
+      - name: Build and push Docker image for ${{ env.FULL_LOCATION }}
+        run: |
+          # Use FULL_LOCATION for the download URL
+          LOCATION_URL="${{ env.FULL_LOCATION }}"
+
+          # Extract the last part of the location for the filename (e.g., "south-korea")
+          LOCATION_NAME=$(basename "${LOCATION_URL}")
+
+          # Download map file for the specified location
+          curl -o ${LOCATION_NAME}-latest.osm.pbf "https://download.geofabrik.de/${LOCATION_URL}-latest.osm.pbf"
+
+          # Build Docker image for the specified location
+          docker build --build-arg LOCATION=${LOCATION_NAME} -t ${{ env.BASE_PATH }}:${LOCATION_NAME} .
+
+          # Push Docker image for the specified location
+          docker push ${{ env.BASE_PATH }}:${LOCATION_NAME}
+
+          # Remove downloaded map file to free up space
+          rm ${LOCATION_NAME}-latest.osm.pbf
