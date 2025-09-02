@@ -37,7 +37,7 @@ jobs:
           LOCATION_NAME=$(basename "${LOCATION_URL}")
 
           # Download map file for the specified location
-          curl -o ${LOCATION_NAME}-latest.osm.pbf "https://download.geofabrik.de/${LOCATION_URL}-latest.osm.pbf"
+          curl -L -o ${LOCATION_NAME}-latest.osm.pbf "https://download.geofabrik.de/${LOCATION_URL}-latest.osm.pbf"
 
           # Build Docker image for the specified location
           docker build --build-arg LOCATION=${LOCATION_NAME} -t ${{ env.BASE_PATH }}:${LOCATION_NAME} .
